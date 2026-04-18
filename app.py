@@ -1,15 +1,17 @@
 import streamlit as st
 from google import genai
 import os
-from dotenv import load_dotenv
 from datetime import datetime
 
-load_dotenv()
-os.environ["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY", "")
+try:
+    api_key = st.secrets["GEMINI_API_KEY"]
+    st.session_state.api_key_loaded = True
+except KeyError:
+    st.session_state.api_key_loaded = False
 
 st.set_page_config(page_title="✨ DANI", page_icon="✨", layout="wide")
 
-for key in ["msgs", "chat", "busy", "pending", "profile_name", "profile_mood", "conversations", "theme", "current_file", "file_content"]:
+for key in ["msgs", "chat", "busy", "pending", "profile_name", "profile_mood", "conversations", "theme", "current_file", "file_content", "api_key_loaded"]:
     if key not in st.session_state:
         if key == "msgs": st.session_state[key] = []
         elif key == "chat": st.session_state[key] = None
@@ -74,7 +76,7 @@ with st.sidebar:
     
     st.markdown(f'<div class="section-title">📁 Enviar Imagem</div>', unsafe_allow_html=True)
     image_types = ["png", "jpg", "jpeg", "webp", "gif"]
-    uploaded_file = st.file_uploader("", type=image_types)
+    uploaded_file = st.file_uploader("Enviar imagem", type=image_types, label_visibility="hidden")
     
     if uploaded_file:
         st.session_state.current_file = uploaded_file.name
@@ -120,7 +122,7 @@ with st.sidebar:
             st.rerun()
     
     st.markdown(f'<div class="section-title">📄 Arquivos (texto)</div>', unsafe_allow_html=True)
-    doc_file = st.file_uploader("", type=["pdf", "txt", "doc"], key="doc_uploader")
+    doc_file = st.file_uploader("Enviar arquivo", type=["pdf", "txt", "doc"], key="doc_uploader", label_visibility="hidden")
     if doc_file:
         st.success(f"📎 {doc_file.name}")
         st.session_state.current_doc = doc_file
@@ -177,8 +179,8 @@ user_name = st.session_state.profile_name or "amigo"
 st.markdown(f'<div class="greeting">{greetings.get(st.session_state.profile_mood, "Olá!")} {user_name}!</div>', unsafe_allow_html=True)
 st.markdown('<div class="logo">✨ DANI</div>', unsafe_allow_html=True)
 
-if not os.getenv("GEMINI_API_KEY"):
-    st.error("Configure GEMINI_API_KEY no arquivo .env")
+if not st.session_state.get("api_key_loaded"):
+    st.error("Configure GEMINI_API_KEY no secrets.toml")
     st.stop()
 
 for msg in st.session_state.msgs:
